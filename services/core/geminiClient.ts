@@ -2,7 +2,7 @@ import { GoogleGenAI, HarmCategory, HarmBlockThreshold, type SafetySetting } fro
 import { getSettings } from '../settingsService';
 import { AiPerformanceSettings, SafetySettingsConfig } from '../../types';
 import { DEFAULT_AI_PERFORMANCE_SETTINGS } from '../../constants';
-import { obfuscateText, processNarration } from '../../utils/textProcessing';
+import { processNarration, obfuscateText } from '../../utils/textProcessing';
 
 const DEBUG_MODE = true; // Bật/tắt chế độ debug chi tiết trong Console (F12)
 
@@ -77,9 +77,20 @@ function handleApiError(error: unknown, safetySettings: SafetySettingsConfig): E
 }
 
 function createDetailedErrorFromResponse(candidate: any, safetySettings: SafetySettingsConfig, isJson: boolean): Error {
+    const responseType = isJson ? "JSON" : "";
+
+    // Xử lý trường hợp không có "candidate" nào được trả về.
+    // Đây là trường hợp lỗi nghiêm trọng, thường do prompt bị chặn hoàn toàn ở cấp độ đầu vào do vi phạm chính sách nghiêm trọng.
+    if (!candidate) {
+        console.error(`Gemini API returned no candidates. The prompt was likely blocked entirely before generation.`);
+        if (!safetySettings.enabled) {
+             return new Error(`Phản hồi ${responseType} từ AI trống hoàn toàn (không có "candidate"). Yêu cầu của bạn có thể đã bị chặn bởi bộ lọc an toàn nội bộ của Google do chứa nội dung vi phạm chính sách nghiêm trọng. Hãy thử diễn đạt lại hành động của bạn một cách "văn học" hơn.`);
+        }
+        return new Error(`Phản hồi ${responseType} từ AI trống hoàn toàn (không có "candidate"). Yêu cầu của bạn có thể đã bị chặn bởi bộ lọc an toàn. Vui lòng kiểm tra lại nội dung hoặc điều chỉnh cài đặt an toàn.`);
+    }
+
     const finishReason = candidate?.finishReason;
     const safetyRatings = candidate?.safetyRatings;
-    const responseType = isJson ? "JSON" : "";
 
     switch (finishReason) {
         case 'SAFETY':
@@ -110,6 +121,7 @@ function createDetailedErrorFromResponse(candidate: any, safetySettings: SafetyS
 
         case 'OTHER':
         default:
+            // Xử lý rõ ràng trường hợp `finishReason` là `undefined`
             const reason = finishReason || 'Không rõ lý do';
             console.error(`Gemini API returned no text. Finish reason: ${reason}`, candidate);
             if (!safetySettings.enabled) {
@@ -131,7 +143,7 @@ export async function generate(prompt: string, systemInstruction?: string): Prom
   
     let finalContents = systemInstruction ? `${systemInstruction}\n\n---\n\n${prompt}` : prompt;
 
-    // Apply obfuscation to the entire payload if safety filters are off (Safety Bypass Mode)
+    // Mã hóa TOÀN BỘ nội dung gửi đi nếu bộ lọc an toàn đang tắt
     if (!safetySettings.enabled) {
         finalContents = obfuscateText(finalContents);
     }
@@ -217,7 +229,7 @@ export async function generateJson<T>(prompt: string, schema: any, systemInstruc
   
     let finalContents = systemInstruction ? `${systemInstruction}\n\n---\n\n${prompt}` : prompt;
 
-    // Apply obfuscation to the entire payload if safety filters are off (Safety Bypass Mode)
+    // Mã hóa TOÀN BỘ nội dung gửi đi nếu bộ lọc an toàn đang tắt
     if (!safetySettings.enabled) {
         finalContents = obfuscateText(finalContents);
     }

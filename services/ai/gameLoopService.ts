@@ -177,7 +177,7 @@ export const getNextTurn = async (gameState: GameState, codeExtractedTime?: Time
     }
     
     // Bước 4: Lắp ráp prompt cuối cùng với dữ liệu đã được lọc
-    const { prompt, systemInstruction } = getNextTurnPrompt(
+    const { prompt, systemInstruction } = await getNextTurnPrompt(
         gameState,
         relevantContext, // <- SỬ DỤNG NGỮ CẢNH ĐÃ LỌC
         relevantKnowledge,
