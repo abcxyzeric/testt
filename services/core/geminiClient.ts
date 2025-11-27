@@ -2,7 +2,7 @@ import { GoogleGenAI, HarmCategory, HarmBlockThreshold, type SafetySetting } fro
 import { getSettings } from '../settingsService';
 import { AiPerformanceSettings, SafetySettingsConfig } from '../../types';
 import { DEFAULT_AI_PERFORMANCE_SETTINGS } from '../../constants';
-import { processNarration, obfuscateText } from '../../utils/textProcessing';
+import { processNarration } from '../../utils/textProcessing';
 
 const DEBUG_MODE = true; // Bật/tắt chế độ debug chi tiết trong Console (F12)
 
@@ -141,12 +141,7 @@ export async function generate(prompt: string, systemInstruction?: string): Prom
     const MAX_RETRIES = 2; // Giới hạn cứng số lần thử lại là 2
     let lastError: Error | null = null;
   
-    let finalContents = systemInstruction ? `${systemInstruction}\n\n---\n\n${prompt}` : prompt;
-
-    // Mã hóa TOÀN BỘ nội dung gửi đi nếu bộ lọc an toàn đang tắt
-    if (!safetySettings.enabled) {
-        finalContents = obfuscateText(finalContents);
-    }
+    const finalContents = systemInstruction ? `${systemInstruction}\n\n---\n\n${prompt}` : prompt;
 
     if (DEBUG_MODE) {
         console.groupCollapsed('🚀 [DEBUG] Gemini Request (generate)');
@@ -227,12 +222,7 @@ export async function generateJson<T>(prompt: string, schema: any, systemInstruc
     const MAX_RETRIES = 2; // Giới hạn cứng số lần thử lại là 2
     let lastError: Error | null = null;
   
-    let finalContents = systemInstruction ? `${systemInstruction}\n\n---\n\n${prompt}` : prompt;
-
-    // Mã hóa TOÀN BỘ nội dung gửi đi nếu bộ lọc an toàn đang tắt
-    if (!safetySettings.enabled) {
-        finalContents = obfuscateText(finalContents);
-    }
+    const finalContents = systemInstruction ? `${systemInstruction}\n\n---\n\n${prompt}` : prompt;
 
     if (DEBUG_MODE) {
         console.groupCollapsed('🚀 [DEBUG] Gemini Request (generateJson)');

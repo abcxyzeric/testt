@@ -3,7 +3,6 @@ import { GameState, WorldConfig, TimePassed } from "../types";
 import { getGameMasterSystemInstruction, getResponseLengthDirective } from './systemInstructions';
 import { buildNsfwPayload, buildPronounPayload, buildTimePayload, buildReputationPayload } from '../utils/promptBuilders';
 import { getSettings } from "../services/settingsService";
-import { sanitizeTextForAIContext } from "../services/ai/ragService";
 import { obfuscateText } from "../../utils/textProcessing";
 
 // Helper function to build NPC Memory Flag context
@@ -168,12 +167,20 @@ export const getNextTurnPrompt = async (gameState: GameState, fullContext: any, 
     const { safetySettings } = getSettings();
     const isSafetyBypassMode = !safetySettings.enabled && worldConfig.allowAdultContent;
 
-    let recentHistoryString = history.slice(0, -1).slice(-4).map(turn => `${turn.type === 'action' ? 'Người chơi' : 'AI'}: ${turn.content.replace(/<[^>]*>/g, '')}`).join('\n\n');
+    const recentHistoryTurns = history.slice(0, -1).slice(-4);
     const playerActionContent = lastPlayerAction.content;
 
+    let recentHistoryString: string;
+
     if (isSafetyBypassMode) {
-        // "Làm sạch" lịch sử để giảm bớt ngữ cảnh nhạy cảm tích tụ
-        recentHistoryString = await sanitizeTextForAIContext(recentHistoryString, worldConfig);
+        // "Mã hóa Mù" lịch sử cũ để giảm bớt ngữ cảnh nhạy cảm tích tụ
+        recentHistoryString = recentHistoryTurns.map(turn => 
+            `${turn.type === 'action' ? 'Người chơi' : 'AI'}: ${obfuscateText(turn.content.replace(/<[^>]*>/g, ''))}`
+        ).join('\n\n');
+    } else {
+        recentHistoryString = recentHistoryTurns.map(turn => 
+            `${turn.type === 'action' ? 'Người chơi' : 'AI'}: ${turn.content.replace(/<[^>]*>/g, '')}`
+        ).join('\n\n');
     }
     
     const lengthDirective = getResponseLengthDirective(worldConfig.aiResponseLength);
@@ -265,7 +272,7 @@ ${pronounPayload}
     const fullPrompt = `${worldStateContext}
 
 --- HÀNH ĐỘNG MỚI CỦA NGƯỜI CHƠI ---
-"${playerActionContent}"
+"${isSafetyBypassMode ? obfuscateText(playerActionContent) : playerActionContent}"
 --- KẾT THÚC HÀNH ĐỘNG ---
 
 --- NHIỆM VỤ ---
