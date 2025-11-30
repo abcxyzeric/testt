@@ -17,7 +17,7 @@ import { resetRequestStats, printRequestStats, setDebugContext } from '../core/g
 
 const DEBUG_MODE = true; // Bật/tắt chế độ debug chi tiết trong Console (F12)
 
-export const startGame = async (config: WorldConfig): Promise<{ narration: string; tags: ParsedTag[] }> => {
+export const startGame = async (config: WorldConfig): Promise<{ narration: string; tags: ParsedTag[]; worldEvent: string | null; }> => {
     resetRequestStats(); // Reset cho lượt mới
     setDebugContext('World Init (Start Game)');
     
@@ -157,7 +157,7 @@ async function getInjectedMemories(gameState: GameState, queryEmbedding: number[
 }
 
 
-export const getNextTurn = async (gameState: GameState, codeExtractedTime?: TimePassed): Promise<{ narration: string; tags: ParsedTag[] }> => {
+export const getNextTurn = async (gameState: GameState, codeExtractedTime?: TimePassed): Promise<{ narration: string; tags: ParsedTag[]; worldEvent: string | null; }> => {
     resetRequestStats(); // Reset số liệu thống kê request cho lượt mới
     const { history, worldConfig } = gameState;
     

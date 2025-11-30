@@ -32,26 +32,47 @@ function parseKeyValue(content: string): Record<string, any> {
 }
 
 /**
- * Tách phản hồi thô của AI thành phần tường thuật và một danh sách các thẻ lệnh đã được phân tích.
+ * Tách phản hồi thô của AI thành phần tường thuật, sự kiện thế giới, và một danh sách các thẻ lệnh đã được phân tích, dựa trên cấu trúc khối mới.
  * @param rawText - Toàn bộ văn bản phản hồi từ AI.
- * @returns Một đối tượng chứa `narration` và một mảng `tags`.
+ * @returns Một đối tượng chứa `narration`, `worldEvent`, và một mảng `tags`.
  */
-export function parseResponse(rawText: string): { narration: string; tags: ParsedTag[] } {
+export function parseResponse(rawText: string): { narration: string; worldEvent: string | null; tags: ParsedTag[] } {
     let narration = '';
+    let worldEvent: string | null = null;
     let tagsPart = '';
     const tags: ParsedTag[] = [];
 
-    // Tách phần tường thuật và phần thẻ lệnh dựa trên thẻ [NARRATION_END]
-    const separatorRegex = /(\[NARRATION_END\]|NARRATION_END)/i;
-    const separatorMatch = rawText.match(separatorRegex);
+    // Trích xuất các khối bằng regex không tham lam
+    const narrationMatch = rawText.match(/\[NARRATION_START\]([\s\S]*?)\[NARRATION_END\]/i);
+    narration = narrationMatch ? narrationMatch[1].trim() : '';
 
-    if (separatorMatch && typeof separatorMatch.index === 'number') {
-        narration = rawText.substring(0, separatorMatch.index).trim();
-        tagsPart = rawText.substring(separatorMatch.index + separatorMatch[0].length).trim();
-    } else {
-        // Xử lý dự phòng nếu AI quên thẻ [NARRATION_END]
+    const worldEventMatch = rawText.match(/\[WORLD_EVENT_START\]([\s\S]*?)\[WORLD_EVENT_END\]/i);
+    if (worldEventMatch && worldEventMatch[1].trim()) {
+        worldEvent = worldEventMatch[1].trim();
+    }
+    
+    // Mọi thứ sau [DATA_TAGS] là phần thẻ lệnh
+    const dataTagsMatch = rawText.match(/\[DATA_TAGS\]([\s\S]*)/i);
+    if (dataTagsMatch) {
+        tagsPart = dataTagsMatch[1].trim();
+    } 
+    // Dự phòng: nếu AI quên [DATA_TAGS] nhưng nhớ [NARRATION_END]
+    else {
+        const narrationEndIndex = rawText.toUpperCase().lastIndexOf('[NARRATION_END]');
+        if (narrationEndIndex !== -1) {
+            const endOfNarrationTag = rawText.substring(narrationEndIndex).match(/\[NARRATION_END\]/i);
+            if(endOfNarrationTag && endOfNarrationTag.index !== undefined){
+                 tagsPart = rawText.substring(narrationEndIndex + endOfNarrationTag[0].length).trim();
+            }
+        }
+    }
+
+    // Nếu tường thuật vẫn trống sau khi phân tích khối, đây là một lỗi nghiêm trọng hoặc phản hồi cũ.
+    // Sử dụng toàn bộ văn bản làm tường thuật và hy vọng vào điều tốt nhất.
+    if (!narration && !tagsPart && !worldEvent) {
+        // Đây là phương pháp dự phòng cho hành vi cũ hoặc các phản hồi AI bị định dạng sai.
         const firstTagMatch = rawText.match(/\n\s*\[\w+:/);
-        if (firstTagMatch && typeof firstTagMatch.index === 'number') {
+         if (firstTagMatch && typeof firstTagMatch.index === 'number') {
             narration = rawText.substring(0, firstTagMatch.index).trim();
             tagsPart = rawText.substring(firstTagMatch.index).trim();
         } else {
@@ -59,20 +80,21 @@ export function parseResponse(rawText: string): { narration: string; tags: Parse
             tagsPart = '';
         }
     }
-
-    // Phân tích các thẻ lệnh từ phần tagsPart
-    const tagBlockRegex = /\[(\w+):\s*([\s\S]*?)\]/g;
-    let match;
-    while ((match = tagBlockRegex.exec(tagsPart)) !== null) {
-        const tagName = match[1].toUpperCase();
-        const content = match[2].trim();
-        try {
-            const params = parseKeyValue(content);
-            tags.push({ tagName, params });
-        } catch (e) {
-            console.error(`Không thể phân tích nội dung cho thẻ [${tagName}]:`, content, e);
-        }
+    
+    if (tagsPart) {
+      const tagBlockRegex = /\[(\w+):\s*([\s\S]*?)\]/g;
+      let match;
+      while ((match = tagBlockRegex.exec(tagsPart)) !== null) {
+          const tagName = match[1].toUpperCase();
+          const content = match[2].trim();
+          try {
+              const params = parseKeyValue(content); // Hàm parseKeyValue đã có sẵn
+              tags.push({ tagName, params });
+          } catch (e) {
+              console.error(`Không thể phân tích nội dung cho thẻ [${tagName}]:`, content, e);
+          }
+      }
     }
     
-    return { narration, tags };
+    return { narration, worldEvent, tags };
 }

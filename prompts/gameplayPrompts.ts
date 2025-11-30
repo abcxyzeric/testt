@@ -1,5 +1,5 @@
 import { Type } from "@google/genai";
-import { GameState, WorldConfig, TimePassed } from "../types";
+import { GameState, WorldConfig, TimePassed } from "../../types";
 import { getGameMasterSystemInstruction, getResponseLengthDirective } from './systemInstructions';
 import { buildNsfwPayload, buildPronounPayload, buildTimePayload, buildReputationPayload } from '../utils/promptBuilders';
 import { getSettings } from "../services/settingsService";
@@ -37,8 +37,7 @@ const buildNpcMemoryFlagContext = (gameState: GameState, playerActionContent: st
 
 const getTagInstructions = () => `
 --- THƯ VIỆN THẺ LỆNH (BẮT BUỘC TUÂN THỦ) ---
-Sau khi viết xong phần tường thuật, bạn PHẢI xuống dòng và viết chính xác thẻ '[NARRATION_END]'.
-Sau thẻ đó, bạn PHẢI liệt kê TOÀN BỘ các thay đổi về dữ liệu game bằng cách sử dụng các thẻ định dạng sau. Mỗi thẻ trên một dòng riêng.
+Sau khối [DATA_TAGS], bạn PHẢI liệt kê TOÀN BỘ các thay đổi về dữ liệu game bằng cách sử dụng các thẻ định dạng sau. Mỗi thẻ trên một dòng riêng.
 Bên trong mỗi thẻ là một danh sách các cặp key-value, phân cách bởi dấu phẩy. Chuỗi phải được đặt trong dấu ngoặc kép.
 
 **LƯU Ý CÚ PHÁP (CỰC KỲ QUAN TRỌNG):**

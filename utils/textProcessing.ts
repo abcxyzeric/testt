@@ -1,4 +1,5 @@
 
+
 // utils/textProcessing.ts
 import { CoreEntityType } from '../types';
 
@@ -53,6 +54,9 @@ export const processNarration = (narration: string): string => {
     if (!narration) return '';
 
     let cleanedText = narration;
+
+    // Bước 0: Loại bỏ hoàn toàn khối suy nghĩ của AI
+    cleanedText = cleanedText.replace(/\[THINKING_START\][\s\S]*?\[THINKING_END\]/i, '').trim();
 
     // Bước 1: Loại bỏ các thẻ bên trong dấu ngoặc kép (hội thoại)
     // Regex tìm các chuỗi trong dấu ngoặc kép, và 'group1' là nội dung bên trong.

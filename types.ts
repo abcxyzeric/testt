@@ -235,6 +235,7 @@ export interface GameState {
   weather: string;
   npcDossiers?: Record<string, NpcDossier>; // Hồ sơ tương tác với NPC, key là tên NPC (lowercase)
   currentLocationId?: string; // Vị trí hiện tại của người chơi
+  worldEvent?: string | null; // Sự kiện thế giới song song
   
   // Hàng đợi các mục cần vector hóa (Ký gửi cho lượt sau)
   pendingVectorBuffer?: PendingVectorItem[];
